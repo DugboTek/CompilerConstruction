@@ -16038,11 +16038,33 @@
         // Get the input text from the "text" box
         var text = document.getElementById("text").value;
         // Replace whitespace at the beginning and end of the text using regular expressions
+
+        text = text.replaceAll("+", " + ");
+        //do the same for - * / and (
+        text = text.replaceAll("-", " - ");
+        text = text.replaceAll("*", " * ");
+        text = text.replaceAll("/", " / ");
+        text = text.replaceAll("(", " ( ");
+        text = text.replaceAll(")", " ) ");
+        text = text.replaceAll("=", " = ");
+        text = text.replaceAll(";", " ; ");
+        text = text.replaceAll(":", " : ");
+        text = text.replaceAll(">", " > ");
+        text = text.replaceAll("<", " < ");
+
+        //replace multuple spaces in a row ith single space using /\s+/g
+        text = text.replace(/\s+/g, " ");
+
         text = text.replace(/^\s*/, "").replace(/\s*$/, "");
 
         // Split the text into tokens (Google for "javascript split" for ideas),
         // which gives us an array of strings not including the whitespace
         var tokens = text.split(/[\r\n|\r|\t|\n| ]+/);
+
+        //set cleaned up text back to the box
+        document.getElementById("text").value = text;
+
+        // set tokens to text split by spaces
 
         // Iterate through tokens and do something interesting
         for (i = 0; i < tokens.length; i++) {
