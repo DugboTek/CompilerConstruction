@@ -16034,6 +16034,10 @@
     </script>
     <title>Checker</title>
     <script type="text/javascript">
+      //make token a global var
+      var tokens;
+      //index of the current token in the tokens array
+      var currentToken;
       function check() {
         // Get the input text from the "text" box
         var text = document.getElementById("text").value;
@@ -16059,7 +16063,7 @@
 
         // Split the text into tokens (Google for "javascript split" for ideas),
         // which gives us an array of strings not including the whitespace
-        var tokens = text.split(/[\r\n|\r|\t|\n| ]+/);
+        tokens = text.split(/[\r\n|\r|\t|\n| ]+/);
 
         //set cleaned up text back to the box
         document.getElementById("text").value = text;
@@ -16067,13 +16071,79 @@
         // set tokens to text split by spaces
 
         // Iterate through tokens and do something interesting
-        for (i = 0; i < tokens.length; i++) {
-          do_something_with_token(i, tokens[i]);
+        currentToken = 0;
+        while (currentToken < tokens.length) {
+          do_something_with_token();
+          currentToken++;
         }
       }
 
-      function do_something_with_token(i, token) {
-        append_result("token " + i + ": " + token + "\n");
+      function do_something_with_token(currentToken, token) {
+        append_result(
+          "token " +
+            currentToken +
+            ": " +
+            token +
+            " name:" +
+            tokenName(token) +
+            "\n"
+        );
+      }
+
+      //is factor
+      function isFactor() {
+        if (isNumber()) {
+          return true;
+        } else if (isLeftParen()) {
+          currentToken++;
+          if (isExpr()) {
+            if (isRightParen()) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function isMulOp() {
+        return token == "*" || token == "/";
+      }
+
+      // function isAdop
+      function isAddOp() {
+        return tokens[currentToken] == "+" || tokens[currentToken] == "-";
+      }
+
+      //function is leftParen
+      function isLeftParen() {
+        return tokens[currentToken] == "(";
+      }
+
+      //function is rightParen
+      function isRightParen() {
+        return tokens[currentToken] == ")";
+      }
+
+      //function is number isnan
+      function isNumber() {
+        return !isNaN(tokens[currentToken]);
+      }
+
+      //function that takes in token and returns the token name
+      function tokenName() {
+        if (isAddOp()) {
+          return "AddOp";
+        } else if (isMulOp()) {
+          return "MulOp";
+        } else if (isLeftParen()) {
+          return "LeftParen";
+        } else if (isRightParen()) {
+          return "RightParen";
+        } else if (isNumber()) {
+          return "Number";
+        } else {
+          return "Unknown";
+        }
       }
 
       function append_result(token) {
