@@ -1,0 +1,420 @@
+<!-- saved from url=(0082)http://www.csc.villanova.edu/~tway/courses/csc4181/s2024/labs/lab1/checker_v4.html -->
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252" />
+    <script>
+      window["GUARDIO_SENSOR_CONF"] = { click: true };
+    </script>
+    <title>Checker V4</title>
+    <script type="text/javascript">
+      // Index of the current token in the tokens array
+      var currentToken;
+
+      // Array of tokens
+      var tokens;
+
+      function check() {
+        // Clear results
+        clear_results();
+
+        // Get the input text from the "text" box
+        var text = document.getElementById("text").value;
+
+        // Surround operators and parentheses with spaces
+        // Question: Is there a way to use regular expression for this?
+        text = text.replaceAll("+", " + ");
+        text = text.replaceAll("-", " - ");
+        text = text.replaceAll("*", " * ");
+        text = text.replaceAll("/", " / ");
+        text = text.replaceAll("(", " ( ");
+        text = text.replaceAll(")", " ) ");
+
+        // Replace multiple spaces in a row with a single spaces
+        text = text.replace(/\s+/g, " ");
+
+        // Replace whitespace at beginning and end of the text using regular expressions
+        text = text.replace(/^\s*/, "").replace(/\s*$/, "");
+
+        // Set the cleaned up text back on the box
+        document.getElementById("text").value = text;
+
+        // Debugging tricks
+        //console.log('###' + text + '###');
+        //alert(text);
+
+        // Split the text into tokens (Google for "javascript split" for ideas),
+        // which gives us an array of strings not including the whitespace
+        // Question: Is there a better way to split on whitespace?
+        tokens = text.split(/[\r\n|\r|\t|\n| ]+/);
+
+        if (!checkMismatchedParentheses()) {
+          append_result("reject");
+          return;
+        }
+
+        // Pre-check the tokens for problems
+        currentToken = 0;
+        while (currentToken < tokens.length) {
+          console.log("checking token " + currentToken);
+          // see if the token is invalid, print error
+          if (tokens[currentToken] == tokenName()) {
+            append_result(
+              "Token " +
+                (currentToken + 1) +
+                " is invalid: " +
+                tokens[currentToken]
+            );
+          }
+
+          // count left and right parens, report if different
+
+          currentToken++;
+        }
+
+        // if left and right paren count are different, print error msg?
+
+        // Iterate through tokens and do something interesting
+        currentToken = 0;
+
+        // Determine if the array of tokens represents an expression
+        var result = isExp();
+        console.log("currentToken:" + currentToken);
+        console.log("tokens.length:" + tokens.length);
+        if (currentToken != tokens.length || !result) {
+          append_result(
+            "Parsing error at token " +
+              (currentToken + 1) +
+              ": " +
+              tokens[currentToken]
+          );
+          append_result("reject");
+        } else {
+          append_result("accept");
+        }
+
+        //while(currentToken < tokens.length)
+        //{
+        //	do_something_with_token();
+        //	currentToken++;
+        //}
+      }
+
+      function do_something_with_token() {
+        append_result(
+          "token " +
+            currentToken +
+            ": " +
+            tokens[currentToken] +
+            " name: " +
+            tokenName() +
+            "\n"
+        );
+      }
+
+      function tokenName() {
+        if (isAddOp()) return "addop";
+        if (isMulOp()) return "mulop";
+        if (isLeftParen()) return "leftParen";
+        if (isRightParen()) return "rightParen";
+        if (isNumber()) return "number";
+        return tokens[currentToken];
+      }
+
+      function isExp() {
+        var oldCurrentToken = currentToken; // remember
+
+        if (isTerm() && isAddOp() && isExp()) return true;
+
+        currentToken = oldCurrentToken; // restore
+
+        if (isTerm()) return true;
+
+        currentToken = oldCurrentToken;
+
+        if (!isTerm()) {
+          if (
+            tokens[currentToken - 1] == "+" ||
+            tokens[currentToken - 1] == "-"
+          ) {
+            append_result("extra operator " + tokens[currentToken - 1]);
+          } else {
+            append_result(
+              "Missing term in front of " + tokens[currentToken + 1]
+            );
+          }
+        }
+
+        currentToken = oldCurrentToken; // restore
+        append_result(
+          "Invalid expression at token " +
+            (currentToken + 1) +
+            ": " +
+            tokens[currentToken]
+        );
+
+        return false;
+      }
+
+      function isFactor() {
+        var oldCurrentToken = currentToken; // remember
+
+        // Question: How do we keep track of current token after it matches?
+        // Do we increment currentToken after a match? Or what?
+        if (isLeftParen() && isExp() && isRightParen()) return true;
+
+        currentToken = oldCurrentToken; // restore
+
+        if (isNumber()) return true;
+
+        currentToken = oldCurrentToken; // restore
+
+        return false;
+      }
+
+      function checkMismatchedParentheses() {
+        var leftParenCount = 0;
+        var rightParenCount = 0;
+
+        for (var i = 0; i < tokens.length; i++) {
+          if (tokens[i] === "(") {
+            leftParenCount++;
+          } else if (tokens[i] === ")") {
+            rightParenCount++;
+
+            // Check for mismatched right parentheses
+            if (rightParenCount > leftParenCount) {
+              append_result(
+                "Mismatched right parenthesis at token " +
+                  (i + 1) +
+                  ": " +
+                  tokens[i]
+              );
+              return false;
+            }
+          }
+        }
+
+        // Check for mismatched left parentheses
+        if (leftParenCount !== rightParenCount) {
+          append_result(
+            "Mismatched left parenthesis at token " +
+              tokens.length +
+              ": " +
+              tokens[tokens.length - 1]
+          );
+          return false;
+        }
+
+        return true;
+      }
+
+      function isTerm() {
+        var oldCurrentToken = currentToken; // remember
+
+        if (isFactor() && isMulOp() && isTerm()) return true;
+
+        currentToken = oldCurrentToken; // restore
+
+        if (isFactor()) return true;
+
+        currentToken = oldCurrentToken; // restore
+
+        return false;
+      }
+
+      function isAddOp() {
+        if (tokens[currentToken] == "+" || tokens[currentToken] == "-") {
+          currentToken++;
+          return true;
+        }
+        return false;
+      }
+
+      function isMulOp() {
+        if (tokens[currentToken] == "*" || tokens[currentToken] == "/") {
+          currentToken++;
+          return true;
+        }
+        return false;
+      }
+
+      function isLeftParen() {
+        if (tokens[currentToken] == "(") {
+          currentToken++;
+          return true;
+        }
+        return false;
+      }
+
+      function isRightParen() {
+        if (tokens[currentToken] == ")") {
+          currentToken++;
+          return true;
+        }
+        return false;
+      }
+
+      function isNumber() {
+        if (!isNaN(tokens[currentToken])) {
+          currentToken++;
+          return true;
+        }
+        return false;
+      }
+
+      function append_result(token) {
+        document.getElementById("results").value += token + "\n";
+      }
+
+      function clear_results() {
+        document.resultform.reset();
+      }
+    </script>
+    <link
+      id="nordvpn-contentScript-extension-fonts"
+      rel="stylesheet"
+      href="./Checker V4_files/css"
+    />
+  </head>
+  <body
+    bgcolor="#CCFFFF"
+    data-new-gr-c-s-check-loaded="14.1152.0"
+    data-gr-ext-installed=""
+  >
+    <h1>Checker V4</h1>
+    <p>
+      Copy and paste, or type, a math expression to be checked below and click
+      "Check".
+    </p>
+    <form name="checker" action="javascript:check()">
+      <p>
+        <textarea rows="9" id="text" name="text" cols="99">
+  (5*6)/(7+8)-9  </textarea
+        ><br />
+        <input type="submit" value="Check" name="" />
+        <input
+          type="reset"
+          value="Reset"
+          name=""
+          onclick="javascript:clear_results()"
+        />
+      </p>
+    </form>
+    <h2>Result</h2>
+    <form name="resultform">
+      <p>
+        <textarea
+          rows="10"
+          id="results"
+          name="results"
+          cols="99"
+          readonly="readonly"
+        ></textarea>
+      </p>
+    </form>
+    <p>&nbsp;</p>
+  </body>
+  <nordvpn-contentscript-extension-mount-3.7.3
+    ><template shadowrootmode="open"
+      ><link
+        rel="stylesheet"
+        href="chrome-extension://fjoaledfpmneenckfbpdfhkmimnjocfa/csHttp.bundle.css" />
+      <div
+        id="nordvpn-contentScript-extension-root-3.7.3"
+        style="position: fixed; left: 0px; top: 0px; z-index: 2147483647"
+      ></div></template></nordvpn-contentscript-extension-mount-3.7.3
+  ><style>
+    @media print {
+      #simplifyJobsContainer {
+        display: none;
+      }
+    }
+  </style>
+  <div
+    id="simplifyJobsContainer"
+    style="
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      width: 0px;
+      height: 0px;
+      overflow: visible;
+      z-index: 2147483647;
+    "
+  >
+    <span
+      ><template shadowrootmode="open"
+        ><link
+          rel="stylesheet"
+          href="chrome-extension://pbanhockgagggenencehbnadejlgchfc/css/styles.css" /><style>
+          :host {
+            all: initial;
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+            -moz-tab-size: 4;
+            -o-tab-size: 4;
+            tab-size: 4;
+            font-family: Palanquin, ui-sans-serif, system-ui, -apple-system,
+              BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+              "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+              "Segoe UI Symbol", "Noto Color Emoji";
+          }
+          * {
+            font-family: Palanquin, ui-sans-serif, system-ui, -apple-system,
+              BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+              "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+              "Segoe UI Symbol", "Noto Color Emoji";
+            scrollbar-width: thin;
+            scrollbar-color: rgba(203, 213, 225, 1) transparent;
+          }
+          *::-webkit-scrollbar {
+            width: 6px;
+          }
+          *::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          *::-webkit-scrollbar-thumb {
+            background-color: rgba(203, 213, 225, 1);
+            border-radius: 3px;
+            border: 0;
+          }
+        </style>
+        <div id="simplifyJobsPortals"></div></template
+    ></span>
+  </div>
+  <script
+    id="simplifyJobsPageScript"
+    src="chrome-extension://pbanhockgagggenencehbnadejlgchfc/js/pageScript.bundle.js"
+  ></script>
+  <grammarly-desktop-integration data-grammarly-shadow-root="true"
+    ><template shadowrootmode="open"
+      ><style>
+        div.grammarly-desktop-integration {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+        }
+
+        div.grammarly-desktop-integration:before {
+          content: attr(data-content);
+        }
+      </style>
+      <div
+        aria-label="grammarly-integration"
+        role="group"
+        tabindex="-1"
+        class="grammarly-desktop-integration"
+        data-content='{"mode":"full","isActive":true,"isUserDisabled":false}'
+      ></div></template
+  ></grammarly-desktop-integration>
+</html>
