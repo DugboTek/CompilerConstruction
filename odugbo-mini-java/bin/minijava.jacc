@@ -1,0 +1,216 @@
+// Mini Java syntax checker.
+
+// Author: Sola Dugbo
+
+// Date: 3/08/22
+
+%{
+import java.io.*;
+import java.nio.charset.*;
+%}
+
+%class Parser
+%interface ParserTokens
+%semantic int : yylval
+%get token
+%next yylex()
+%start Program
+
+// Constants for all recognized tokens
+%token AND LT PLUS MINUS TIMES NOT EQUALS UNKNOWN
+%token LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE COMMA DOT SEMICOLON
+%token CLASS PUBLIC STATIC VOID MAIN STRING EXTENDS RETURN INT BOOLEAN
+%token IF ELSE WHILE PRINT TRUE FALSE THIS NEW LENGTH
+%token IDENTIFIER INTEGER_LITERAL
+
+%%
+
+Program: MainClass ClassDeclarations { printResult(); }
+;
+
+MainClass: CLASS Identifier LBRACE MainMethod RBRACE
+;
+
+MainMethod: PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET Identifier RPAREN LBRACE Statement RBRACE
+;
+
+ClassDeclarations: /* empty */
+                 | ClassDeclarationList
+;
+
+ClassDeclarationList: ClassDeclaration
+                    | ClassDeclarationList ClassDeclaration
+;
+
+ClassDeclaration: CLASS Identifier ExtendsClause LBRACE VarDeclarations MethodDeclarations RBRACE
+;
+
+ExtendsClause: /* empty */
+              | EXTENDS Identifier
+;
+
+VarDeclarations: /* empty */
+               | VarDeclarations VarDeclaration
+;
+
+VarDeclaration: Type Identifier SEMICOLON
+;
+
+MethodDeclarations: /* empty */
+                  | MethodDeclarationList
+;
+
+MethodDeclarationList: MethodDeclaration
+                     | MethodDeclarationList MethodDeclaration
+;
+
+MethodDeclaration: PUBLIC Type Identifier LPAREN TypeIdentifiers RPAREN LBRACE VarDeclarations Statements RETURN Expression SEMICOLON RBRACE
+;
+
+TypeIdentifiers: /* empty */
+               | TypeIdentifierList
+;
+
+TypeIdentifierList: TypeIdentifier
+                  | TypeIdentifierList COMMA TypeIdentifier
+;
+
+TypeIdentifier: Type Identifier
+;
+
+Statements: /* empty */
+          | StatementList
+;
+
+StatementList: Statement
+             | StatementList Statement
+;
+
+Type: INT
+    | INT LBRACKET RBRACKET
+    | BOOLEAN
+    | Identifier
+;
+
+Statement: LBRACE Statements RBRACE
+         | IF LPAREN Expression RPAREN Statement ELSE Statement
+         | IF LPAREN Expression RPAREN Statement
+         | WHILE LPAREN Expression RPAREN Statement
+         | PRINT LPAREN Expression RPAREN SEMICOLON
+         | Identifier EQUALS Expression SEMICOLON
+         | Identifier LBRACKET Expression RBRACKET EQUALS Expression SEMICOLON
+;
+
+Expressions: /* empty */
+           | ExpressionList
+;
+
+ExpressionList: Expression
+              | ExpressionList COMMA Expression
+;
+
+Expression: Expression AND Expression
+          | Expression LT Expression
+          | Expression PLUS Expression
+          | Expression MINUS Expression
+          | Expression TIMES Expression
+          | Expression LBRACKET Expression RBRACKET
+          | Expression DOT LENGTH
+          | Expression DOT Identifier LPAREN Expressions RPAREN
+          | INTEGER_LITERAL
+          | TRUE
+          | FALSE
+          | Identifier
+          | THIS
+          | NEW INT LBRACKET Expression RBRACKET
+          | NEW Identifier LPAREN RPAREN
+          | NOT Expression
+          | LPAREN Expression RPAREN
+;
+
+Identifier: IDENTIFIER
+;
+
+%%
+
+// Verbose mode, turn on noisier output
+boolean verbose = true;
+int yylval; // current token value
+int token; // current token
+
+// Variable containing current expression
+private String program = "";
+private String name = "";
+
+// Outputs the program when in verbose mode
+private void printProgram()
+{
+    if (verbose)
+    {
+        System.out.println("Program: " + name);
+        System.out.println(program);
+    }
+}
+
+// Prints an accept result
+private void printResult()
+{
+    System.out.println(name + ": SYNTAX CHECK PASSED");
+    printProgram();
+}
+
+// Prints failure message with details
+public void errorMessage(String error)
+{
+	int col = lexer.getCol();
+	int line = lexer.getLine();
+    System.out.println("SYNTAX CHECK FAILED");
+    String lines[] = program.split("\\r?\\n");
+  
+    System.out.println(name + ":"+ (line+1) + "," + (col+1) + ": error: " + error);
+
+    
+    System.out.println(lines[line]);
+    String caretstr = "";
+    for(int i = 0; i < col; i++){
+    	caretstr += " ";
+    }
+    caretstr += "^";
+    System.out.println(caretstr);
+}
+
+// Reference to the lexer object
+private static Yylex lexer;
+
+// Interface to the lexer
+private int yylex()
+{
+    int retVal = ENDINPUT;
+    try
+    {
+        retVal = lexer.yylex();
+    }
+    catch (IOException e)
+    {
+        System.err.println("IO Error:" + e);
+    }
+    return retVal;
+}
+
+// Default error handling
+public void yyerror(String error)
+{
+    // uses custom error message if defined in mathexpr.errs
+    errorMessage(yyerrno<0 ? error : yyerrmsgs[yyerrno]);
+}
+
+// constructor taking a String
+public Parser(String name, String program)
+{
+    this.name = name;
+    this.program = program;
+    InputStream lineStream = new ByteArrayInputStream(program.getBytes((Charset.forName("UTF-8"))));
+    InputStreamReader r = new InputStreamReader(lineStream);
+    lexer = new Yylex(r, this);
+    token = yylex(); // prime the pump
+}

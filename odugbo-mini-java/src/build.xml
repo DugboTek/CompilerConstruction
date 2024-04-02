@@ -1,0 +1,136 @@
+<project name="MiniJavaSyntaxChecker" default="build" basedir=".">
+	<description>MiniJava Syntax Checker Ant build file</description>
+	
+	<!-- source files -->
+    <property name="src.dir" location="../src" />
+    
+    <!-- class and data files -->
+    <property name="build.dir" location="../bin" />
+	
+	<!-- test programs -->
+	<property name="good.dir" location="../good" />
+	<property name="bad.dir" location="../bad" />
+	<property name="test.dir" location="../test" />
+	
+	<!-- info about setting auto-refresh -->
+	<target name="How-To-Auto-Refresh">
+		<echo message="To make your project auto refresh:" />
+		<echo message="Open Window > Preferences > General > Workspace" />
+		<echo message="Check Refresh using native hooks or polling" />
+		<echo message="Click Apply and Close" />
+	</target>
+
+	<!-- delete various generated files -->
+	<target name="clean">
+		<echo message="Removing generated files" />
+		<delete><fileset dir="${build.dir}" /></delete>
+		<delete file='Yylex.java' />
+		<delete file='Yylex.java~' />
+		<delete file='ParserTokens.java' />
+		<delete file='Parser.java' />
+		<delete file='minijavaMachine.html' />
+	</target>
+	
+	<!-- generate the parser using JACC -->
+	<target name="parser">
+		<echo message="Generating the jacc parser" />
+		<java jar="jacc.jar" 
+			fork="true" 
+			failonerror="true" 
+			maxmemory="128m">
+			<!-- uncomment the -h arg to generate HTML report
+			<arg value="-h" />
+			-->
+			<arg value="minijava.jacc" />
+		</java>
+	</target>
+	
+	<!-- generate the scanner using JFlex -->
+	<target name="scanner" depends="parser">
+		<echo message="Generating the scanner" />
+		<java jar="jflex-full-1.8.2.jar" 
+			fork="true" 
+			failonerror="true" 
+			maxmemory="128m">
+			<arg value="--nobak" />
+        	<arg value="--quiet" />
+			<arg value="minijava.flex" />
+		</java>
+	</target>
+	
+	<!-- compile the scanner and other Java files -->
+	<target name="build" depends="scanner">
+		<echo message="Compiling the scanner and parser" />
+		<javac srcdir="." 
+			destdir="${build.dir}" 
+			includeantruntime="false" />
+	</target>
+
+	<!-- run the parser on the good test data file -->
+    <target name="run-good" depends="">
+		<echo message="Running the parser on all correct programs." />
+		<echo message="Make sure you build first after making any changes." />
+        <java classname="MiniJavaSyntaxChecker" dir="${build.dir}" fork="true">
+        	<arg value="${good.dir}\OneToTen.java" />
+        	<arg value="${good.dir}\Factorial.java" />
+        	<arg value="${good.dir}\BinarySearch.java" />       	
+        	<arg value="${good.dir}\BinaryTree.java" />
+        	<arg value="${good.dir}\BubbleSort.java" />
+        	<arg value="${good.dir}\LinearSearch.java" />
+        	<arg value="${good.dir}\LinkedList.java" />
+        	<arg value="${good.dir}\QuickSort.java" />
+        	<arg value="${good.dir}\TreeVisitor.java" />
+        	<arg value="${good.dir}\TokenChecker.java" />
+        </java>
+    </target>
+
+	<!-- run the parser on the good test data file -->
+    <target name="run-bad" depends="">
+		<echo message="Running the parser on all incorrect programs." />
+		<echo message="Make sure you build first after making any changes." />
+        <java classname="MiniJavaSyntaxChecker" dir="${build.dir}" fork="true">
+        	<arg value="${bad.dir}\BadOne.java" />
+        	<arg value="${bad.dir}\BadTwo.java" />
+        	<arg value="${bad.dir}\BadThree.java" />
+        	<arg value="${bad.dir}\BadFour.java" />
+        	<arg value="${bad.dir}\BadFive.java" />
+        	<arg value="${bad.dir}\BadSix.java" />
+        	<arg value="${bad.dir}\BadSeven.java" />
+        	<arg value="${bad.dir}\BadEight.java" />
+        	<arg value="${bad.dir}\BadNine.java" />
+        	<arg value="${bad.dir}\BadTen.java" />
+        </java>
+    </target>
+	
+	<!-- run the scanner on a single program file -->
+	<!-- change the value of the arg as needed to test -->
+    <target name="run-scanner" depends="">
+		<echo message="Running the scanner on one program." />
+		<echo message="Make sure you build first after making any changes." />
+		<echo message="Include %debug directive in .flex file to show tokens found." />
+        <java classname="Yylex" dir="${build.dir}" fork="true">
+        	<arg value="${good.dir}\OneToTen.java" />
+        </java>
+    </target>
+
+	<!-- run the parser on a single program file -->
+	<!-- change the value of the arg as needed to test -->
+	<!-- directory can be ${test.dir}, ${good.dir} or ${bad.dir} -->
+    <target name="run-one" depends="">
+		<echo message="Running the parser on one program." />
+		<echo message="Make sure you build first after making any changes." />
+        <java classname="MiniJavaSyntaxChecker" dir="${build.dir}" fork="true">
+        	<arg value="${test.dir}\MyTest.java" />
+        </java>
+    </target>
+
+	<!-- run the parser on a single program string -->
+	<!-- change the value of the arg as needed to test -->
+    <target name="run-string" depends="">
+		<echo message="Running the parser on one program as a string." />
+		<echo message="Make sure you build first after making any changes." />
+        <java classname="MiniJavaSyntaxChecker" dir="${build.dir}" fork="true"
+        	inputstring="class Name { 0 }">
+        </java>
+    </target>
+</project>
